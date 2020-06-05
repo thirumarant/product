@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"../controller"
@@ -24,16 +23,16 @@ func NewProductHandler(db *gorm.DB) *ProductHandler {
 }
 
 // GetAllProducts : Retrieve all products and can handle a name filter
-func (ph *ProductHandler) GetAllProducts(c echo.Context) error {
-	var err error
+func (ph *ProductHandler) GetAllProducts(c echo.Context) (err error) {
 
 	// Get a pointer to the product model
-	var pm *model.Products
+	var pm *model.ProductList
 
 	// Check for the presence of the name query string
 	n := c.QueryParam("name")
 
-	// If name exist filter using name else unfiltered result
+	// If name exists url query
+	// filter using name else unfiltered result
 	if len(n) > 0 {
 		pm, err = ph.pc.GetProductByName(n)
 	} else {
@@ -42,33 +41,33 @@ func (ph *ProductHandler) GetAllProducts(c echo.Context) error {
 
 	// Check for controller issues and throw an internal error
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.NewError(err))
+		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
 	}
 
 	// If results are empty throw a not found status
 	if pm == nil {
-		return c.JSON(http.StatusNotFound, utils.NotFound())
+		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
 	}
 
 	// All good respond with results
-	return c.JSON(http.StatusOK, pm)
+	return c.JSONPretty(http.StatusOK, pm, " ")
 }
 
-// GetProductByID : Retrives a specific product by id
+// GetProductByID : Retrieves a specific product by id
 func (ph *ProductHandler) GetProductByID(c echo.Context) error {
 	var err error
 
 	pm, err := ph.pc.GetProductByID(c.Param("id"))
 
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, utils.NewError(err))
+		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
 	}
 
 	if pm == nil {
-		return c.JSON(http.StatusNotFound, utils.NotFound())
+		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
 	}
 
-	return c.JSON(http.StatusOK, pm)
+	return c.JSONPretty(http.StatusOK, pm, " ")
 }
 
 // CreateProduct : Create a brand new product
@@ -81,15 +80,13 @@ func (ph *ProductHandler) CreateProduct(c echo.Context) error {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
-	fmt.Println(m)
-
 	err = ph.pc.AddProduct(m)
 
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
-	return c.JSON(http.StatusCreated, nil)
+	return c.JSONPretty(http.StatusCreated, map[string]interface{}{"result": "ok"}, " ")
 }
 
 // UpdateProductByID : Updates the product details by the provided product ID
@@ -115,7 +112,7 @@ func (ph *ProductHandler) UpdateProductByID(c echo.Context) error {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
-	return c.JSON(http.StatusOK, "Updated product succesfully")
+	return c.JSON(http.StatusOK, map[string]interface{}{"result": "ok"})
 }
 
 // DeleteProductByID : Removes a product using the provided product ID
@@ -136,21 +133,56 @@ func (ph *ProductHandler) DeleteProductByID(c echo.Context) error {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
-	return c.JSON(http.StatusOK, "deleted product succesfully")
+	return c.JSON(http.StatusOK, map[string]interface{}{"result": "ok"})
 }
 
-// FindAllOptionByProductID : Retrives all the options of a product by the given product ID
+// FindAllOptionByProductID : Retrieves all the options of a product by the given product ID
 func (ph *ProductHandler) FindAllOptionByProductID(c echo.Context) error {
 	var err error
 
-	return err
+	po := new(model.ProductOption)
+
+	po.ProductID = c.Param("id")
+
+	pl, err := ph.pc.GetAllProductOption(po)
+
+	// Check for controller issues and throw an internal error
+	if err != nil {
+		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
+	}
+
+	// If results are empty throw a not found status
+	if po == nil {
+		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
+	}
+
+	// All good respond with results
+	return c.JSONPretty(http.StatusOK, pl, " ")
 }
 
-// FindSpecificOptionByProductID : Retrives the options of a product by the given product ID
+// FindSpecificOptionByProductID : Retrieves the options of a product by the given product ID
 func (ph *ProductHandler) FindSpecificOptionByProductID(c echo.Context) error {
 	var err error
 
-	return err
+	po := new(model.ProductOption)
+
+	po.ProductID = c.Param("id")
+	po.ID = c.Param("optionId")
+
+	pl, err := ph.pc.GetAllProductOption(po)
+
+	// Check for controller issues and throw an internal error
+	if err != nil {
+		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
+	}
+
+	// If results are empty throw a not found status
+	if po == nil {
+		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
+	}
+
+	// All good respond with results
+	return c.JSONPretty(http.StatusOK, pl, " ")
 }
 
 // AddOptionByProductID : Adds option for a product by the given product ID
