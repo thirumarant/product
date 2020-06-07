@@ -1,0 +1,133 @@
+package controller
+
+import (
+	"../model"
+	"github.com/hashicorp/go-uuid"
+	"github.com/jinzhu/gorm"
+	"strings"
+)
+
+type ProductController struct {
+	db *gorm.DB
+}
+
+func NewProductController(db *gorm.DB) *ProductController {
+	return &ProductController{
+		db: db,
+	}
+}
+
+func (pc *ProductController) List() (model.ProductList, error) {
+	var products []model.Product
+
+	pc.db.Find(&products)
+
+	return model.ProductList{Items: products}, pc.db.Error
+}
+
+func (pc *ProductController) ListByName(name string) (model.ProductList, error) {
+	var products []model.Product
+
+	pc.db.Where(&model.Product{Name: name}).Find(&products)
+
+	return model.ProductList{Items: products}, pc.db.Error
+}
+
+func (pc *ProductController) GetByID(id string) (*model.Product, error) {
+	var product model.Product
+
+	err := pc.db.Where("Id = ?", id).Find(&product).Error
+
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &product, nil
+}
+
+func (pc *ProductController) CreateProduct(product *model.Product) error {
+	uuid, err := uuid.GenerateUUID()
+
+	if err != nil {
+		return err
+	}
+	product.ID = strings.ToUpper(uuid)
+	return pc.db.Create(&product).Error
+}
+
+func (pc *ProductController) UpdateProduct(product *model.Product) error {
+	if pc.db.Model(&model.Product{ID: product.ID}).Updates(&product).RowsAffected == 0 && &pc.db.Error == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	return pc.db.Error
+}
+
+func (pc *ProductController) DeleteProduct(product *model.Product) error {
+	if pc.db.Delete(&product).RowsAffected == 0 && pc.db.Error == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	return pc.db.Error
+}
+
+func (pc *ProductController) ListOptions(id string) (model.ProductOptionList, error) {
+	var productOptions []model.ProductOption
+
+	pc.db.Table("ProductOptions").
+		Where("ProductId = ?", id).Find(&productOptions)
+
+	return model.ProductOptionList{Items: &productOptions}, pc.db.Error
+}
+
+func (pc *ProductController) CreateOption(productOption *model.ProductOption) error {
+	uuid, err := uuid.GenerateUUID()
+
+	if err != nil {
+		return err
+	}
+
+	productOption.ID = strings.ToUpper(uuid)
+
+	return pc.db.Table("ProductOptions").Create(&productOption).Error
+}
+
+func (pc *ProductController) GetSpecificOption(id string, optionId string) (*model.ProductOption, error) {
+	var productOption model.ProductOption
+
+	if pc.db.Table("ProductOptions").
+		Where("ProductId = ? AND Id = ?", id, optionId).
+		Find(&productOption).RowsAffected == 0 {
+		if pc.db.Error != nil {
+			return nil, pc.db.Error
+		}
+		return nil, nil
+	}
+
+	return &productOption, pc.db.Error
+}
+
+func (pc *ProductController) UpdateSpecificOption(id string, optionId string, po *model.ProductOption) error {
+	if pc.db.Table("ProductOptions").
+		Where("Id = ? AND ProductId = ?", optionId, id).
+		Updates(&po).
+		RowsAffected == 0 && pc.db.Error == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	return pc.db.Error
+}
+
+func (pc *ProductController) DeleteSpecificOption(id string, optionId string) error {
+	if pc.db.Table("ProductOptions").
+		Delete(&model.ProductOption{ProductID: id, ID: optionId}).
+		RowsAffected == 0 && pc.db.Error == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	return pc.db.Error
+}

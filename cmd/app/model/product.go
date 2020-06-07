@@ -12,5 +12,5 @@ type Product struct {
 
 // Products hold a list of product
 type ProductList struct {
-	Items *[]Product `json:"Items"`
+	Items []Product `json:"Items"`
 }

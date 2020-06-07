@@ -5,59 +5,41 @@ import (
 
 	"../model"
 	"../utils"
-	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 )
 
-// ProductHandler container field holder
-type ProductHandler struct {
-	db *gorm.DB
-}
-
-// NewProductHandler is the constructor to instantiate a product handler
-func NewProductHandler(db *gorm.DB) *ProductHandler {
-	return &ProductHandler{
-		db: db,
-	}
-}
-
-func (ph *ProductHandler) Get(c echo.Context) (err error) {
-	ph.db = ph.db.New()
-	products := new([]model.Product)
+func (h *Handler) Get(c echo.Context) (err error) {
+	var productList model.ProductList
 
 	name := c.QueryParam("name")
 
 	if len(name) > 0 {
-		ph.db = ph.db.Where("name = ?", name).Find(&products)
+		productList, err = h.productFront.ListByName(name)
 	} else {
-		ph.db = ph.db.Find(&products)
+		productList, err = h.productFront.List()
 	}
 
-	// Check for controller issues and throw an internal error
-	if ph.db.RowsAffected < 1 {
+	if len(productList.Items) == 0 {
 		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
 	}
 
-	if ph.db.Error != nil {
-		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(ph.db.Error), " ")
+	if err != nil {
+		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
 	}
 
 	// All good respond with results
-	return c.JSONPretty(http.StatusOK, &model.ProductList{Items: products}, " ")
+	return c.JSONPretty(http.StatusOK, &productList, " ")
 }
 
-func (ph *ProductHandler) GetByID(c echo.Context) (err error) {
-	ph.db.New()
-	product := new(model.Product)
+func (h *Handler) GetByID(c echo.Context) error {
 
-	// Run query
-	ph.db = ph.db.Where("Id = ?", c.Param("id")).Find(&product)
+	product, err := h.productFront.GetByID(c.Param("id"))
 
-	if ph.db.Error != nil {
-		if ph.db.RowsAffected < 1 {
-			return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
-		}
+	if product == nil {
+		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
+	}
 
+	if err != nil {
 		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
 	}
 
@@ -65,15 +47,15 @@ func (ph *ProductHandler) GetByID(c echo.Context) (err error) {
 }
 
 // CreateProduct : Create a brand new product
-func (ph *ProductHandler) Add(c echo.Context) (err error) {
+func (h *Handler) Add(c echo.Context) (err error) {
 	product := model.Product{}
+
 	err = c.Bind(&product)
 
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
-
-	err = ph.db.Create(&product).Error
+	err = h.productFront.CreateProduct(&product)
 
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
@@ -83,15 +65,15 @@ func (ph *ProductHandler) Add(c echo.Context) (err error) {
 }
 
 // CreateProduct : Create a brand new product
-func (ph *ProductHandler) Update(c echo.Context) (err error) {
-	product := new(model.Product)
-	err = c.Bind(product)
+func (h *Handler) Update(c echo.Context) (err error) {
+	product := model.Product{ID: c.Param("id")}
+	err = c.Bind(&product)
 
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
-	err = ph.db.Model(&model.Product{ID: c.Param("id")}).Updates(&product).Error
+	err = h.productFront.UpdateProduct(&product)
 
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
@@ -101,10 +83,12 @@ func (ph *ProductHandler) Update(c echo.Context) (err error) {
 }
 
 // CreateProduct : Create a brand new product
-func (ph *ProductHandler) Delete(c echo.Context) (err error) {
-	product := model.Product{ID: c.Param("id")}
+func (h *Handler) Delete(c echo.Context) (err error) {
+	var product model.Product
 
-	err = ph.db.Delete(&product).Error
+	product.ID = c.Param("id")
+
+	err = h.productFront.DeleteProduct(&product)
 
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
@@ -113,50 +97,37 @@ func (ph *ProductHandler) Delete(c echo.Context) (err error) {
 	return c.JSONPretty(http.StatusOK, map[string]interface{}{"result": "ok"}, " ")
 }
 
-func (ph *ProductHandler) GetOptions(c echo.Context) (err error) {
+func (h *Handler) GetOptions(c echo.Context) (err error) {
 
-	var productOptions []model.ProductOption
+	var productOptionsList model.ProductOptionList
 
-	productId := c.Param("id")
+	productOptionsList, err = h.productFront.ListOptions(c.Param("id"))
 
-	// Run query
-	ph.db.Table("ProductOptions").Where("ProductId = ?", productId).Find(&productOptions)
-
-	if ph.db.Error != nil {
+	if err != nil {
 		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
 	}
 
-	if &productOptions == nil {
-		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
-	}
-
-	return c.JSONPretty(http.StatusOK, model.ProductOptionList{Items: &productOptions}, " ")
+	return c.JSONPretty(http.StatusOK, &productOptionsList, " ")
 }
 
 // FindSpecificOptionByProductID : Retrieves the options of a product by the given product ID
-func (ph *ProductHandler) GetAnOption(c echo.Context) (err error) {
-	var productOption model.ProductOption
+func (h *Handler) GetAnOption(c echo.Context) error {
 
-	productId := c.Param("id")
-	optionId := c.Param("optionId")
+	productOption, err := h.productFront.GetSpecificOption(c.Param("id"), c.Param("optionId"))
 
-	query := "Id = ? AND ProductId = ?"
-	// Run query
-	ph.db = ph.db.Table("ProductOptions").Where(query, optionId, productId).Find(&productOption)
+	if productOption == nil {
+		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
+	}
 
-	if ph.db.Error != nil {
-		if ph.db.RowsAffected < 1 {
-			return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
-		}
-
-		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(ph.db.Error), " ")
+	if err != nil {
+		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
 	}
 
 	return c.JSONPretty(http.StatusOK, &productOption, " ")
 }
 
 // AddOptionByProductID : Adds option for a product by the given product ID
-func (ph *ProductHandler) AddAnOption(c echo.Context) (err error) {
+func (h *Handler) AddAnOption(c echo.Context) (err error) {
 	productOption := model.ProductOption{ProductID: c.Param("id")}
 	err = c.Bind(&productOption)
 
@@ -164,7 +135,7 @@ func (ph *ProductHandler) AddAnOption(c echo.Context) (err error) {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
-	err = ph.db.Table("ProductOptions").Create(&productOption).Error
+	err = h.productFront.CreateOption(&productOption)
 
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
@@ -174,21 +145,14 @@ func (ph *ProductHandler) AddAnOption(c echo.Context) (err error) {
 }
 
 // UpdateSpecificOptionByProductID : Updates a specific option of a product by the given product ID
-func (ph *ProductHandler) UpdateAnOption(c echo.Context) (err error) {
-
+func (h *Handler) UpdateAnOption(c echo.Context) (err error) {
 	productOption := model.ProductOption{}
-
-	err = c.Bind(productOption)
-
+	err = c.Bind(&productOption)
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
-	query := "Id = ? AND ProductId = ?"
-
-	ph.db.Model(&model.ProductOption{}).Where(query, c.Param("optionId"), c.Param("id")).Updates(&productOption)
-
-	err = ph.db.Error
+	err = h.productFront.UpdateSpecificOption(c.Param("id"), c.Param("optionId"), &productOption)
 
 	if err != nil {
 		return c.JSON(http.StatusConflict, utils.NewError(err))
@@ -198,20 +162,13 @@ func (ph *ProductHandler) UpdateAnOption(c echo.Context) (err error) {
 }
 
 // DeleteSpecificOptionByProductID : Removes a specific option of a product by the given product ID
-func (ph *ProductHandler) DeleteAnOption(c echo.Context) (err error) {
-	productOption := model.ProductOption{}
-	productOption.ProductID = c.Param("id")
-	productOption.ID = c.Param("optionId")
+func (h *Handler) DeleteAnOption(c echo.Context) (err error) {
 
-	ph.db = ph.db.Table("ProductOptions").Delete(&productOption)
+	err = h.productFront.DeleteSpecificOption(c.Param("id"), c.Param("optionId"))
 
-	if ph.db.Error != nil {
+	if err != nil {
 
 		return c.JSON(http.StatusConflict, utils.NewError(err))
-	}
-
-	if ph.db.RowsAffected < 1 {
-		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
 	}
 
 	return c.JSONPretty(http.StatusOK, map[string]interface{}{"result": "ok"}, " ")
