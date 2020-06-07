@@ -8,6 +8,7 @@ import (
 
 func New() *echo.Echo {
 	e := echo.New()
+	e.HideBanner = true
 	e.Logger.SetLevel(log.DEBUG)
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Use(middleware.Logger())
