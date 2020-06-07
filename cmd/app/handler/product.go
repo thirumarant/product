@@ -23,7 +23,7 @@ func NewProductHandler(db *gorm.DB) *ProductHandler {
 
 func (ph *ProductHandler) Get(c echo.Context) (err error) {
 	ph.db = ph.db.New()
-	products := new([]model.Product)
+	var products []model.Product
 
 	name := c.QueryParam("name")
 
