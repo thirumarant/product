@@ -2,8 +2,9 @@ package controller
 
 import (
 	"../model"
+	"github.com/hashicorp/go-uuid"
 	"github.com/jinzhu/gorm"
-	"golang.org/x/crypto/poly1305"
+	"strings"
 )
 
 type ProductController struct {
@@ -35,7 +36,9 @@ func (pc *ProductController) ListByName(name string) (model.ProductList, error) 
 func (pc *ProductController) GetByID(id string) (*model.Product, error) {
 	var product model.Product
 
-	if err := pc.db.Where("Id = ?", id).Find(&product).Error; err != nil {
+	err := pc.db.Where("Id = ?", id).Find(&product).Error
+
+	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, nil
 		}
@@ -47,28 +50,48 @@ func (pc *ProductController) GetByID(id string) (*model.Product, error) {
 }
 
 func (pc *ProductController) CreateProduct(product *model.Product) error {
+	uuid, err := uuid.GenerateUUID()
+
+	if err != nil {
+		return err
+	}
+	product.ID = strings.ToUpper(uuid)
 	return pc.db.Create(&product).Error
 }
 
 func (pc *ProductController) UpdateProduct(product *model.Product) error {
-	return pc.db.Model(&model.Product{ID: product.ID}).Updates(&product).Error
+	if pc.db.Model(&model.Product{ID: product.ID}).Updates(&product).RowsAffected == 0 && &pc.db.Error == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	return pc.db.Error
 }
 
 func (pc *ProductController) DeleteProduct(product *model.Product) error {
-	return pc.db.Delete(&product).Error
+	if pc.db.Delete(&product).RowsAffected == 0 && pc.db.Error == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	return pc.db.Error
 }
 
 func (pc *ProductController) ListOptions(id string) (model.ProductOptionList, error) {
 	var productOptions []model.ProductOption
 
 	pc.db.Table("ProductOptions").
-		Where(&model.ProductOption{ProductID: id}).Find(&productOptions)
+		Where("ProductId = ?", id).Find(&productOptions)
 
 	return model.ProductOptionList{Items: &productOptions}, pc.db.Error
 }
 
-func (pc *ProductController) CreateOption(id string) error {
-	var productOption model.ProductOption
+func (pc *ProductController) CreateOption(productOption *model.ProductOption) error {
+	uuid, err := uuid.GenerateUUID()
+
+	if err != nil {
+		return err
+	}
+
+	productOption.ID = strings.ToUpper(uuid)
 
 	return pc.db.Table("ProductOptions").Create(&productOption).Error
 }
@@ -76,18 +99,35 @@ func (pc *ProductController) CreateOption(id string) error {
 func (pc *ProductController) GetSpecificOption(id string, optionId string) (*model.ProductOption, error) {
 	var productOption model.ProductOption
 
-	pc.db.Table("ProductOptions").
-		Where(&model.ProductOption{ProductID: id, ID: optionId}).Find(&productOption)
+	if pc.db.Table("ProductOptions").
+		Where("ProductId = ? AND Id = ?", id, optionId).
+		Find(&productOption).RowsAffected == 0 {
+		if pc.db.Error != nil {
+			return nil, pc.db.Error
+		}
+		return nil, nil
+	}
 
 	return &productOption, pc.db.Error
 }
 
-func (pc *ProductController) UpdateSpecificOption(po model.ProductOption) error {
-	return pc.db.Where(&model.ProductOption{ProductID: po.ProductID, ID: po.ID}).
-		Model(&model.ProductOption{}).
-		Updates(&po).Error
+func (pc *ProductController) UpdateSpecificOption(id string, optionId string, po *model.ProductOption) error {
+	if pc.db.Table("ProductOptions").
+		Where("Id = ? AND ProductId = ?", optionId, id).
+		Updates(&po).
+		RowsAffected == 0 && pc.db.Error == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	return pc.db.Error
 }
 
 func (pc *ProductController) DeleteSpecificOption(id string, optionId string) error {
-	return pc.db.Table("ProductOptions").Delete(&model.ProductOption{ProductID: id, ID: optionId}).Error
+	if pc.db.Table("ProductOptions").
+		Delete(&model.ProductOption{ProductID: id, ID: optionId}).
+		RowsAffected == 0 && pc.db.Error == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	return pc.db.Error
 }
