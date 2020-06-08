@@ -1,6 +1,6 @@
 package model
 
-// Product is the basis for product
+// Product option model is the basis for product options
 type ProductOption struct {
 	ID          string `gorm:"column:Id;type:varchar;primary_key" json:"Id" query:"id"`
 	ProductID   string `gorm:"column:ProductId;type:varchar" json:"ProductId" query:"ProductId"`
@@ -8,6 +8,7 @@ type ProductOption struct {
 	Description string `gorm:"column:Description;type:varchar" json:"Description" query:"Description"`
 }
 
+// Product option list holds an array of product option models
 type ProductOptionList struct {
 	Items *[]ProductOption `json:"Items"`
 }

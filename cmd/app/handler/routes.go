@@ -24,7 +24,6 @@ func (h *Handler) Register(v1 *echo.Group) {
 	v1.DELETE("/:id", h.Delete)
 
 	// `GET /products/{id}/options` - finds all options for a specified product.
-	// v1.GET("/:id/options", ph.FindAllOptionByProductID)
 	v1.GET("/:id/options", h.GetOptions)
 
 	// `GET /products/{id}/options/{optionId}` - finds the specified product option for the specified product.

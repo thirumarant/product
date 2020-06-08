@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// API Security
+
 var JWTSecret = []byte("!!SECRET!!")
 
 func GenerateJWT(id uint) string {
