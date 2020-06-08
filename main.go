@@ -25,5 +25,5 @@ func main() {
 	handler.NewHandler(c).Register(v1)
 
 	// Start the web server
-	r.Logger.Fatal(r.Start("127.0.0.1:8585"))
+	r.Logger.Fatal(r.Start("127.0.0.1:8080"))
 }

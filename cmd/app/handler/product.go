@@ -1,12 +1,11 @@
 package handler
 
 import (
-	"errors"
-	"net/http"
-
 	"../model"
 	"../utils"
+	"errors"
 	"github.com/labstack/echo"
+	"net/http"
 )
 
 // Product specific handler specification
@@ -93,8 +92,9 @@ func (h *Handler) Add(c echo.Context) (err error) {
 	// Get model
 	product := model.Product{}
 
-	// bind json payload
-	err = c.Bind(&product)
+	if err = h.ValidateProductPayload(c, &product); err != nil {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(err), " ")
+	}
 
 	// Check for binding issues to bail out
 	if err != nil {
@@ -267,23 +267,11 @@ func (h *Handler) AddAnOption(c echo.Context) (err error) {
 	// Grab product id
 	productId := c.Param("id")
 
-	// Validate ID
-	if !utils.IsValidUUID(productId) {
-		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
-	}
-
 	// Prepare a model with relevant product ID
 	productOption := model.ProductOption{ProductID: productId}
 
-	// Bind incoming payload with model
-	// TODO: This is where input validation needs to be introduced
-	err = c.Bind(&productOption)
-
-	// Check for binding errors
-	if err != nil {
-
-		// Response errors as a conflicts
-		return c.JSON(http.StatusConflict, utils.NewError(err))
+	if err = h.ValidateProductOptionPayload(c, &productOption); err != nil {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(err), " ")
 	}
 
 	// Inject model into controller to create
