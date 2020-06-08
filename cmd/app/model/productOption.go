@@ -10,5 +10,5 @@ type ProductOption struct {
 
 // Product option list holds an array of product option models
 type ProductOptionList struct {
-	Items *[]ProductOption `json:"Items"`
+	Items []ProductOption `json:"Items"`
 }

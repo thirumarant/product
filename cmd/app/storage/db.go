@@ -23,7 +23,7 @@ func New() *gorm.DB {
 	db.DB().SetMaxIdleConns(2)
 
 	// DB setup for debugging
-	db.LogMode(false)
+	db.LogMode(true)
 	db.Debug()
 
 	return db
