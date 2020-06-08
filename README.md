@@ -5,8 +5,8 @@ Xero assessment work
 
 Install golang 1.14
 
-git clone this repository
+git clone https://github.com/thirumarant/product.git
 
-go get -u github.com/thirumarant/product.git
+go get ..
 
 go run main.go
