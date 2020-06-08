@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"../model"
@@ -57,8 +58,14 @@ func (h *Handler) Get(c echo.Context) (err error) {
 // Router /products/{id} [get]
 func (h *Handler) GetByID(c echo.Context) error {
 
+	productId := c.Param("id")
+
+	if !utils.IsValidUUID(productId) {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
+	}
+
 	// Run controller to pull results
-	product, err := h.productFront.GetByID(c.Param("id"))
+	product, err := h.productFront.GetByID(productId)
 
 	// Check if anything came back
 	if product == nil {
@@ -114,8 +121,14 @@ func (h *Handler) Add(c echo.Context) (err error) {
 // Router /products/{id} [put]
 func (h *Handler) Update(c echo.Context) (err error) {
 
+	productId := c.Param("id")
+
+	if !utils.IsValidUUID(productId) {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
+	}
+
 	// Instantiate a model with incoming product ID
-	product := model.Product{ID: c.Param("id")}
+	product := model.Product{ID: productId}
 
 	// Bind the payload to the model
 	err = c.Bind(&product)
@@ -150,7 +163,15 @@ func (h *Handler) Delete(c echo.Context) (err error) {
 	var product model.Product
 
 	// Get incoming product id
-	product.ID = c.Param("id")
+	productId := c.Param("id")
+
+	// Validate ID
+	if !utils.IsValidUUID(productId) {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
+	}
+
+	// Get incoming product id
+	product.ID = productId
 
 	// Get controller to run delete
 	err = h.productFront.DeleteProduct(&product)
@@ -171,11 +192,26 @@ func (h *Handler) Delete(c echo.Context) (err error) {
 // Router /products/{id}/options [get]
 func (h *Handler) GetOptions(c echo.Context) (err error) {
 
+	// Grab incoming product id
+	productId := c.Param("id")
+
+	// Validate ID
+	if !utils.IsValidUUID(productId) {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
+	}
+
 	// Model
 	var productOptionsList model.ProductOptionList
 
 	// Run the controller function and hydrate the model
-	productOptionsList, err = h.productFront.ListOptions(c.Param("id"))
+	productOptionsList, err = h.productFront.ListOptions(productId)
+
+	// Check if any results came back
+	if len(productOptionsList.Items) == 0 {
+
+		// 404 nothing found
+		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
+	}
 
 	// check for processing errors
 	if err != nil {
@@ -193,8 +229,17 @@ func (h *Handler) GetOptions(c echo.Context) (err error) {
 // Router /products/{id}/options/{optionId} [get]
 func (h *Handler) GetAnOption(c echo.Context) error {
 
+	// Grab IDs
+	productId := c.Param("id")
+	optionId := c.Param("optionId")
+
+	// Validate IDs
+	if !utils.IsValidUUID(productId) || !utils.IsValidUUID(optionId) {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
+	}
+
 	// Run controller with filters to retrieve results and populate model
-	productOption, err := h.productFront.GetSpecificOption(c.Param("id"), c.Param("optionId"))
+	productOption, err := h.productFront.GetSpecificOption(productId, optionId)
 
 	// If the model didn't get populated
 	if productOption == nil {
@@ -219,8 +264,16 @@ func (h *Handler) GetAnOption(c echo.Context) error {
 // Router /products/{id}/options [post]
 func (h *Handler) AddAnOption(c echo.Context) (err error) {
 
+	// Grab product id
+	productId := c.Param("id")
+
+	// Validate ID
+	if !utils.IsValidUUID(productId) {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
+	}
+
 	// Prepare a model with relevant product ID
-	productOption := model.ProductOption{ProductID: c.Param("id")}
+	productOption := model.ProductOption{ProductID: productId}
 
 	// Bind incoming payload with model
 	// TODO: This is where input validation needs to be introduced
@@ -253,6 +306,15 @@ func (h *Handler) AddAnOption(c echo.Context) (err error) {
 // Router /products/{id}/options/{optionId} [put]
 func (h *Handler) UpdateAnOption(c echo.Context) (err error) {
 
+	// Grab incoming ID
+	productId := c.Param("id")
+	optionId := c.Param("optionId")
+
+	// Validate ID
+	if !utils.IsValidUUID(productId) || !utils.IsValidUUID(optionId) {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
+	}
+
 	// Prepare a model
 	productOption := model.ProductOption{}
 
@@ -267,7 +329,7 @@ func (h *Handler) UpdateAnOption(c echo.Context) (err error) {
 	}
 
 	// Run controller function to update using filters
-	err = h.productFront.UpdateSpecificOption(c.Param("id"), c.Param("optionId"), &productOption)
+	err = h.productFront.UpdateSpecificOption(productId, optionId, &productOption)
 
 	// Check for controller processing errors
 	if err != nil {
@@ -285,8 +347,17 @@ func (h *Handler) UpdateAnOption(c echo.Context) (err error) {
 // Router /products/{id}/options/{optionId} [delete]
 func (h *Handler) DeleteAnOption(c echo.Context) (err error) {
 
+	// Grab incoming ID
+	productId := c.Param("id")
+	optionId := c.Param("optionId")
+
+	// Validate IDs
+	if !utils.IsValidUUID(productId) || !utils.IsValidUUID(optionId) {
+		return c.JSONPretty(http.StatusConflict, utils.NewError(errors.New("Invalid UUID")), " ")
+	}
+
 	// Run controller function with filters
-	err = h.productFront.DeleteSpecificOption(c.Param("id"), c.Param("optionId"))
+	err = h.productFront.DeleteSpecificOption(productId, optionId)
 
 	// Check for processing error
 	if err != nil {

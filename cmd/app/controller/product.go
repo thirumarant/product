@@ -2,9 +2,8 @@ package controller
 
 import (
 	"../model"
-	"github.com/hashicorp/go-uuid"
+	"../utils"
 	"github.com/jinzhu/gorm"
-	"strings"
 )
 
 // This is the product controller section
@@ -58,12 +57,7 @@ func (pc *ProductController) GetByID(id string) (*model.Product, error) {
 }
 
 func (pc *ProductController) CreateProduct(product *model.Product) error {
-	uuid, err := uuid.GenerateUUID()
-
-	if err != nil {
-		return err
-	}
-	product.ID = strings.ToUpper(uuid)
+	product.ID = utils.GenerateUUID()
 	return pc.db.Create(&product).Error
 }
 
@@ -89,18 +83,11 @@ func (pc *ProductController) ListOptions(id string) (model.ProductOptionList, er
 	pc.db.Table("ProductOptions").
 		Where("ProductId = ?", id).Find(&productOptions)
 
-	return model.ProductOptionList{Items: &productOptions}, pc.db.Error
+	return model.ProductOptionList{Items: productOptions}, pc.db.Error
 }
 
 func (pc *ProductController) CreateOption(productOption *model.ProductOption) error {
-	uuid, err := uuid.GenerateUUID()
-
-	if err != nil {
-		return err
-	}
-
-	productOption.ID = strings.ToUpper(uuid)
-
+	productOption.ID = utils.GenerateUUID()
 	return pc.db.Table("ProductOptions").Create(&productOption).Error
 }
 
