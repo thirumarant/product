@@ -110,6 +110,7 @@ func (pc *ProductController) UpdateSpecificOption(id string, optionId string, po
 	if pc.db.Table("ProductOptions").
 		Where("Id = ? AND ProductId = ?", optionId, id).
 		Model(model.ProductOption{}).
+		Omit("Id").
 		Updates(&po).
 		RowsAffected == 0 && pc.db.Error == nil {
 		return gorm.ErrRecordNotFound
