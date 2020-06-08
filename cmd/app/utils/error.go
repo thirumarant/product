@@ -4,6 +4,8 @@ import (
 	"github.com/labstack/echo"
 )
 
+// Error construction kit to help with the error formatting and response
+
 type Error struct {
 	Errors map[string]interface{} `json:"errors"`
 }

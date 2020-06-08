@@ -7,10 +7,18 @@ import (
 	"strings"
 )
 
+// This is the product controller section
+// All business logic necessary for the CRUD functionality of the product
+// sits in here
+// This layer applies the necessary processing and orchestration needed for the data for storage
+// and relevant enrichment for presentation and experience for the calling layer
+
+// Controller field holder
 type ProductController struct {
 	db *gorm.DB
 }
 
+// Constructor returning an instance of the controller which carries the injected DB
 func NewProductController(db *gorm.DB) *ProductController {
 	return &ProductController{
 		db: db,
