@@ -166,79 +166,135 @@ func (h *Handler) Delete(c echo.Context) (err error) {
 	return c.JSONPretty(http.StatusOK, map[string]interface{}{"result": "ok"}, " ")
 }
 
+// Get product options retrieves the options of a product
+// return error
+// Router /products/{id}/options [get]
 func (h *Handler) GetOptions(c echo.Context) (err error) {
 
+	// Model
 	var productOptionsList model.ProductOptionList
 
+	// Run the controller function and hydrate the model
 	productOptionsList, err = h.productFront.ListOptions(c.Param("id"))
 
+	// check for processing errors
 	if err != nil {
+
+		// Return issues
 		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
 	}
 
+	// All good response with results
 	return c.JSONPretty(http.StatusOK, &productOptionsList, " ")
 }
 
-// FindSpecificOptionByProductID : Retrieves the options of a product by the given product ID
+// Get a specific product option retrieves the a particular option of a product
+// return error
+// Router /products/{id}/options/{optionId} [get]
 func (h *Handler) GetAnOption(c echo.Context) error {
 
+	// Run controller with filters to retrieve results and populate model
 	productOption, err := h.productFront.GetSpecificOption(c.Param("id"), c.Param("optionId"))
 
+	// If the model didn't get populated
 	if productOption == nil {
+
+		// No is found with specification 404
 		return c.JSONPretty(http.StatusNotFound, utils.NotFound(), " ")
 	}
 
+	// Check for processing error as well
 	if err != nil {
+
+		// Notify about error
 		return c.JSONPretty(http.StatusInternalServerError, utils.NewError(err), " ")
 	}
 
+	// All good response with results
 	return c.JSONPretty(http.StatusOK, &productOption, " ")
 }
 
-// AddOptionByProductID : Adds option for a product by the given product ID
+// Add an option to the product add a specific option to a given product
+// returns error
+// Router /products/{id}/options [post]
 func (h *Handler) AddAnOption(c echo.Context) (err error) {
+
+	// Prepare a model with relevant product ID
 	productOption := model.ProductOption{ProductID: c.Param("id")}
+
+	// Bind incoming payload with model
+	// TODO: This is where input validation needs to be introduced
 	err = c.Bind(&productOption)
 
+	// Check for binding errors
 	if err != nil {
+
+		// Response errors as a conflicts
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
+	// Inject model into controller to create
 	err = h.productFront.CreateOption(&productOption)
 
+	// Check for creation error
 	if err != nil {
+
+		// Return issue
+		// TODO: Need to decide on the type of error response to be specific
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
+	// All good response
 	return c.JSONPretty(http.StatusCreated, map[string]interface{}{"result": "ok"}, " ")
 }
 
-// UpdateSpecificOptionByProductID : Updates a specific option of a product by the given product ID
+// Update a product option modifies an existing specific option of a given product
+// return error
+// Router /products/{id}/options/{optionId} [put]
 func (h *Handler) UpdateAnOption(c echo.Context) (err error) {
+
+	// Prepare a model
 	productOption := model.ProductOption{}
+
+	// Bind incoming payload with model
 	err = c.Bind(&productOption)
+
+	// Check for binding errors
 	if err != nil {
+
+		// Return issues
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
+	// Run controller function to update using filters
 	err = h.productFront.UpdateSpecificOption(c.Param("id"), c.Param("optionId"), &productOption)
 
+	// Check for controller processing errors
 	if err != nil {
+
+		// Return issues
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
+	// All good response
 	return c.JSONPretty(http.StatusOK, map[string]interface{}{"result": "ok"}, " ")
 }
 
-// DeleteSpecificOptionByProductID : Removes a specific option of a product by the given product ID
+// Delete an option of a product removes a specific option of a given product
+// return error
+// Router /products/{id}/options/{optionId} [delete]
 func (h *Handler) DeleteAnOption(c echo.Context) (err error) {
 
+	// Run controller function with filters
 	err = h.productFront.DeleteSpecificOption(c.Param("id"), c.Param("optionId"))
 
+	// Check for processing error
 	if err != nil {
 
+		// Return issues
 		return c.JSON(http.StatusConflict, utils.NewError(err))
 	}
 
+	// All good response
 	return c.JSONPretty(http.StatusOK, map[string]interface{}{"result": "ok"}, " ")
 }
